@@ -21,7 +21,10 @@ function changeTheme() {
 }
 
 let searchBtn = document.getElementById("bb");
-searchBtn.addEventListener('click', searchMovie)
+if (searchBtn){
+    searchBtn.addEventListener('click', searchMovie)
+}
+
 
 async function searchMovie() {
     // loader.style.display = "block"
@@ -29,7 +32,7 @@ async function searchMovie() {
     let searchText = document.getElementById('dd').value;
     console.log(searchText);
 
-    let response = await sendRequest("http://www.omdbapi.com/", "GET", {
+    let response = await sendRequest("https://www.omdbapi.com/", "GET", {
         "apikey": "194d0e4c",
         "t": searchText
     })
@@ -59,10 +62,101 @@ async function searchMovie() {
             infoContent += desc;  // Append to the string
         }
 
-        movieInfo.innerHTML = infoContent;  // Set the HTML in one go
-        // loader.style.display = "none"
+        movieInfo.innerHTML = infoContent;  
+    //   loader.style.display = "none"
+      searchSimilarMovies(searchText)
     }
-}
+
+    async function searchSimilarMovies(title){
+        let similarMovies = await sendRequest("https://www.omdbapi.com/", "GET", {
+            "apikey": "194d0e4c",
+            "s": title
+        })
+        
+
+        // if (similarMovies.Response == "False"){
+        //     document.querySelector(".similarMovieTitle h2").style.display = "none"
+        //     document.querySelector(".similarMovies").style.display = "none"
+        // } else {
+        //     document.querySelector(
+        //         ".similarMovieTitle h2"
+        //     ).innerHTML = `Похожих фильмов: ${similarMovies.totalResults}`;
+        //     showSimilarMovies(similarMovies.Search);
+        //     console.log(similarMovies)
+        // }
+        let similarMovieTitle = document.querySelector(".similarMovieTitle h2")
+        similarMovieTitle.innerHTML = `Похожих фильмов: ${similarMovies.totalResults}`
+        similarMovieTitle.style.display="block"
+        console.log(similarMovies)
+        showSimilarMovies(similarMovies.Search)
+    }
+
+    function showSimilarMovies(movies){
+        let similarMoviesContainer = document.querySelector(".similarMovies")
+        let similarMoviesTitle = document.querySelector(".similarMovieTitle h2")
+        similarMoviesContainer.innerHTML = ""
+
+        movies.forEach((movie) => {
+            const index = favs.findIndex(obj => obj.imdbID === movie.imdbID);
+            let favCheck
+            if (index < 0){
+                favCheck = ""
+            } else {
+                favCheck = "active"
+            }
+
+            similarMoviesContainer.innerHTML +=`<div class="similarMoviesCard" style="background-image:url(${movie.Poster})">
+            <div class="favStar ${favCheck}" data-title="${movie.Title}" data-poster="${movie.Poster}" data-imdbID="${movie.imdbID}"></div>
+            <div class="similarMoviesText">${movie.Title}</div>
+            </div>`
+        });
+        activateFavBtns();
+    }
+
+       function  activateFavBtns(){
+            document.querySelectorAll(".favStar").forEach(elem =>{
+                elem.addEventListener("click", addToFav);
+            })
+        }
+
+        function addToFav(){
+            let favBtn = event.target
+            let title = favBtn.getAttribute("data-title");
+            let poster = favBtn.getAttribute("data-poster");
+            let imdbID = favBtn.getAttribute("data-imdbID");
+
+            const index = favs.findIndex(obj => obj.imdbID === imdbID);
+
+
+            if (index < 0){
+            let fav = {title, poster, imdbID}
+            // добавить новый фильм в LS
+            favs.push(fav)
+            localStorage.setItem("favs", JSON.stringify(favs));
+            favBtn.classList.add('active')
+            } else {
+                //Удалить фильм из LS 
+                favs.splice(index, 1)
+                localStorage.setItem("favs", JSON.stringify(favs));
+                favBtn.classList.remove('active')
+            }
+        }
+
+        let favs = localStorage.getItem("favs")
+        if(!favs){
+            favs = [];
+            localStorage.setItem("favs", JSON.stringify(favs));
+        } else {
+            favs = JSON.parse(favs);
+
+        }
+
+        
+
+
+
+    } 
+
 
 async function sendRequest(url, method, data) {
     if(method == "POST") {
@@ -86,4 +180,24 @@ async function sendRequest(url, method, data) {
         response = await response.json();  // Parse the response as JSON
         return response;
     }
+}
+
+function showFavs() {
+    // favs - Массив из объектов с избранными файлами 
+    let similarMoviesContainer = document.querySelector(".similarMovies");
+        let similarMoviesTitle = document.querySelector(".similarMovieTitle h2");
+        similarMoviesContainer.innerHTML = "";
+        similarMoviesTitle.innerHTML = `Фильмы в избранном: ${favs.length}`
+
+        favs.forEach((movie) => {
+            let favCheck = "active"
+          similarMoviesContainer.innerHTML +=`<div class="similarMoviesCard" style="background-image:url(${movie.poster})">
+            <div class="favStar ${favCheck}" data-title="${movie.title}" data-poster="${movie.poster}" data-imdbID="${movie.imdbID}"></div>
+            <div class="similarMoviesText">${movie.title}</div>
+            </div>`
+            });
+        similarMoviesContainer.style.display = "grid";
+        similarMoviesTitle.style.display = "block";
+            activateFavBtns();
+            
 }
